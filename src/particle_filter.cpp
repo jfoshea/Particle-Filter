@@ -25,17 +25,20 @@ using namespace std;
 //                standard deviation of y [m] standard deviation of yaw [rad]]
 //  @return: void
 //=============================================================================
-void ParticleFilter::init( double x, double y, double theta, double std[] ) 
+void ParticleFilter::init(  const double x, const double y, 
+                            const double theta, const double std[] ) 
 {
   // Initialize x,y,theta with a Gaussion distribution
-  normal_distribution<double> dist_x( x, std[0] );
-  normal_distribution<double> dist_y( y, std[1] );
-  normal_distribution<double> dist_theta( theta, std[2] );
+  std::normal_distribution<double> dist_x( x, std[0] );
+  std::normal_distribution<double> dist_y( y, std[1] );
+  std::normal_distribution<double> dist_theta( theta, std[2] );
 
-  default_random_engine gen;
+  std::default_random_engine gen;
 
   // Set the number of particle vector elements equal to NUM_PARTICLES
-  particles.resize( NUM_PARTICLES );
+  num_particles = NUM_PARTICLES;
+  particles.resize( num_particles );
+  cout << __func__ << ": Particle vector resized to " << num_particles << endl;
 
   // Iterate over each particle struct in the vector and assign gaussian
   // distribution for x,y,theta
@@ -43,10 +46,11 @@ void ParticleFilter::init( double x, double y, double theta, double std[] )
     p.x = dist_x( gen );
     p.y = dist_y( gen );
     p.theta = dist_theta( gen );
-    p.weight = 1;
+    p.weight = 1.0;
   }
 
   is_initialized = true;
+  cout << __func__ << ": Particle Filter Initialization Complete" << endl;
 }
 
 //=============================================================================
@@ -63,16 +67,16 @@ void ParticleFilter::init( double x, double y, double theta, double std[] )
 //
 //  @return: void
 //=============================================================================
-void ParticleFilter::prediction( double delta_t, double std_pos[], 
-                                 double velocity, double yaw_rate ) 
+void ParticleFilter::prediction( const double delta_t, const double std_pos[], 
+                                 const double velocity, const double yaw_rate ) 
 {
 
   // Add Gaussian noise for x,y,theta
-  normal_distribution<double> N_x( 0, std_pos[0] );
-  normal_distribution<double> N_y( 0, std_pos[1] );
-  normal_distribution<double> N_theta( 0, std_pos[2] );
+  std::normal_distribution<double> N_x( 0, std_pos[0] );
+  std::normal_distribution<double> N_y( 0, std_pos[1] );
+  std::normal_distribution<double> N_theta( 0, std_pos[2] );
 
-  default_random_engine gen;
+  std::default_random_engine gen;
 
   // Iterate over each particle struct entry and set prediction for x,y,theta 
   for( auto& p: particles ) {
@@ -132,10 +136,9 @@ void ParticleFilter::getInRangeLandmarks( const double sensor_range,
 //
 //  @return: void
 //=============================================================================
-void ParticleFilter::dataAssociation( std::vector<LandmarkObs> range_landmarks, 
+void ParticleFilter::dataAssociation( const std::vector<LandmarkObs> range_landmarks, 
                                       std::vector<LandmarkObs>& map_coords ) 
 {
-  // Iterate over observations vector he distance between 
   for( auto& mc: map_coords ) {
 
       // Initialize minimum distance to maximum number
@@ -144,7 +147,7 @@ void ParticleFilter::dataAssociation( std::vector<LandmarkObs> range_landmarks,
       // Init map_id to negative number
       int map_id = -1;
       
-      // Iterate over predicted landmarks to find distance to observed landmarks
+      // Iterate over range landmarks to find min distance 
       for( const auto& rl: range_landmarks ) {
         // Compute Euclidean distance
         auto cur_dist = dist( mc.x, mc.y, rl.x, rl.y );
@@ -196,25 +199,23 @@ void ParticleFilter::convertVehicleToMap( const Particle& particle,
 //
 //  @return double weight 
 //=============================================================================
-double ParticleFilter::computeWeight( const std::vector<LandmarkObs> map_coords, 
-                                      const Map& map_landmarks,
-                                      const std::vector<LandmarkObs> range_landmarks, 
-                                      const double std_landmark[] )
+void ParticleFilter::computeWeight( const std::vector<LandmarkObs> map_coords, 
+                                    const Map& map_landmarks,
+                                    const std::vector<LandmarkObs> range_landmarks, 
+                                    const double std_landmark[],
+                                    Particle& particle )
 {
   double x = 0.0;
   double y = 0.0;
-  double weight = 0.0;
+  double weight = 1.0;
 
   for( const auto& mc: map_coords ) {
-
     Map::single_landmark_s landmark = map_landmarks.landmark_list.at( mc.id-1 );
-
-    x = pow( mc.x - landmark.x_f, 2) / ( 2 * pow( std_landmark[0], 2 ) );
-    y = pow( mc.y - landmark.y_f, 2) / ( 2 * pow( std_landmark[1], 2 ) );
-    weight = exp( -(x + y) ) / ( 2 * M_PI * std_landmark[0] * std_landmark[1 ] );
-
+    x = pow( mc.x - landmark.x_f, 2 ) / ( 2 * pow( std_landmark[0], 2 ) );
+    y = pow( mc.y - landmark.y_f, 2 ) / ( 2 * pow( std_landmark[1], 2 ) );
+    weight = exp( -(x + y) ) / ( 2 * M_PI * std_landmark[0] * std_landmark[1] );
+    particle.weight *= weight;
   }
-  return weight;
 }
 
 //=============================================================================
@@ -231,33 +232,31 @@ double ParticleFilter::computeWeight( const std::vector<LandmarkObs> map_coords,
 //
 //  @return: void
 //=============================================================================
-void ParticleFilter::updateWeights( double sensor_range, 
-                                    double std_landmark[], 
+void ParticleFilter::updateWeights( const double sensor_range, 
+                                    const double std_landmark[], 
                                     const std::vector<LandmarkObs> &observations, 
-                                    const Map &map_landmarks) 
+                                    const Map &map_landmarks ) 
 {
   
   std::vector<LandmarkObs> range_landmarks;
   std::vector<LandmarkObs> map_coords; 
-  double weight = 0.0;
 
   for( auto& particle: particles ) {
     particle.weight = 1.0;
 
     // Get landmarks within sensor_range
-    memset( &range_landmarks, 0, sizeof( range_landmarks ) );
+    std::memset( &range_landmarks, 0, sizeof( range_landmarks ) );
     getInRangeLandmarks( sensor_range, particle, map_landmarks, range_landmarks );
 
     // Convert observations coordinates from vehicle to map
-    memset( &map_coords, 0, sizeof( map_coords ) );
+    std::memset( &map_coords, 0, sizeof( map_coords ) );
     convertVehicleToMap( particle, observations, map_coords );
 
     // Find landmark index for each observation
     dataAssociation( range_landmarks, map_coords );
 
     // Compute the weight 
-    weight = computeWeight( map_coords, map_landmarks, range_landmarks, std_landmark );
-    particle.weight *=  weight;
+    computeWeight( map_coords, map_landmarks, range_landmarks, std_landmark, particle );
 
     weights.push_back( particle.weight );
   }

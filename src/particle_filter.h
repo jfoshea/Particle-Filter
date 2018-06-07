@@ -40,12 +40,12 @@ public:
 	// Destructor
 	~ParticleFilter() {}
 
-	void init( double x, double y, double theta, double std[] );
+	void init( const double x, const double y, const double theta, const double std[] );
 
-	void prediction(  double delta_t, 
-                    double std_pos[],
-                    double velocity, 
-                    double yaw_rate );
+	void prediction( const double delta_t, 
+                   const double std_pos[],
+                   const double velocity, 
+                   const double yaw_rate );
 	
   void getInRangeLandmarks( const double sensor_range, 
                             const Particle& particle,
@@ -56,19 +56,20 @@ public:
                             const std::vector<LandmarkObs> &observations, 
                             std::vector<LandmarkObs>& map_coords ); 
 
-  void dataAssociation( std::vector<LandmarkObs> range_landmarks, 
+  void dataAssociation( const std::vector<LandmarkObs> range_landmarks, 
                         std::vector<LandmarkObs>& map_coords ); 
+  
+  void computeWeight( const std::vector<LandmarkObs> map_coords, 
+                      const Map& map_landmarks,
+                      const std::vector<LandmarkObs> range_landmarks, 
+                      const double std_landmark[],
+                      Particle& particle );
 
-  double computeWeight( const std::vector<LandmarkObs> map_coords, 
-                        const Map& map_landmarks,
-                        const std::vector<LandmarkObs> range_landmarks, 
-                        const double std_landmark[] );
-
-	void updateWeights( double sensor_range, 
-                      double std_landmark[], 
+	void updateWeights( const double sensor_range, 
+                      const double std_landmark[], 
                       const std::vector<LandmarkObs> &observations,
                       const Map &map_landmarks );
-	
+
 	void resample();
 
 	Particle SetAssociations( Particle& particle, 
@@ -82,8 +83,8 @@ public:
 
 	const bool initialized() const 
   {
-		return is_initialized;
-	}
+    return is_initialized;
+  }
 };
 
 #endif /* PARTICLE_FILTER_H_ */
