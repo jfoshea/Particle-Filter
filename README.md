@@ -17,15 +17,17 @@ This project implements a 2 dimensional particle filter in C++. The particle fil
     ```  
     $ git clone https://github.com/jfoshea/Particle-Filter.git
     ```
-2. Make a build directory if it does not exist
+2. This project involves the Term 2 Simulator which can be downloaded here [link](https://github.com/udacity/self-driving-car-sim/releases)
+
+3. Build the project using cmake or using the scipts below 
     ```  
-    $ mkdir build && cd build 
+    $ ./clean.sh 
+    $ ./build.sh 
     ```
-3. Compile 
-    ```  
-    $ cmake .. && make 
-    ```
+
 4. Run the Particle Filter 
+    1. Launch the simulator and select kidnapped vehicle
+    2. Use the run script to connect to the server and run the simulation 
     ```  
-    $ ./particle_filter 
+    $ ./run.sh
     ```
